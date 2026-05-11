@@ -28,6 +28,7 @@ interface Actions {
   reset: () => void;
 
   addMember: (name?: string) => void;
+  addMembers: (names: string[]) => number;
   updateMember: (id: ID, patch: Partial<Member>) => void;
   deleteMember: (id: ID) => void;
   setMemberPriorityGroups: (id: ID, groups: PriorityGroup[]) => void;
@@ -42,15 +43,18 @@ interface Actions {
   toggleMemberProfile: (memberId: ID, profileId: ID) => void;
 
   addSkillset: (name?: string) => void;
+  addSkillsets: (names: string[]) => number;
   updateSkillset: (id: ID, patch: Partial<Skillset>) => void;
   deleteSkillset: (id: ID) => void;
 
   addProfile: (name?: string) => void;
+  addProfiles: (names: string[]) => number;
   updateProfile: (id: ID, patch: Partial<Profile>) => void;
   deleteProfile: (id: ID) => void;
   toggleProfileSkillset: (profileId: ID, skillsetId: ID) => void;
 
   addSystem: (name?: string) => void;
+  addSystems: (names: string[]) => number;
   updateSystem: (id: ID, patch: Partial<System>) => void;
   deleteSystem: (id: ID) => void;
   toggleSystemRequiredSkillset: (systemId: ID, skillsetId: ID) => void;
@@ -89,6 +93,24 @@ export const useStore = create<Store>()(
             },
           ],
         })),
+      addMembers: (names) => {
+        const trimmed = names.map((n) => n.trim()).filter(Boolean);
+        if (trimmed.length === 0) return 0;
+        set((s) => ({
+          members: [
+            ...s.members,
+            ...trimmed.map((n, i) => ({
+              id: uid(),
+              name: n || `Member ${s.members.length + i + 1}`,
+              weeklyHours: 40,
+              priorityGroups: cloneGroupsWithFreshIds(s.defaultPriorityGroups),
+              skillsetIds: [],
+              profileIds: [],
+            })),
+          ],
+        }));
+        return trimmed.length;
+      },
       updateMember: (id, patch) =>
         set((s) => ({
           members: s.members.map((m) => (m.id === id ? { ...m, ...patch } : m)),
@@ -199,6 +221,20 @@ export const useStore = create<Store>()(
         set((s) => ({
           skillsets: [...s.skillsets, { id: uid(), name: name ?? `Skill ${s.skillsets.length + 1}` }],
         })),
+      addSkillsets: (names) => {
+        const trimmed = names.map((n) => n.trim()).filter(Boolean);
+        if (trimmed.length === 0) return 0;
+        set((s) => ({
+          skillsets: [
+            ...s.skillsets,
+            ...trimmed.map((n, i) => ({
+              id: uid(),
+              name: n || `Skill ${s.skillsets.length + i + 1}`,
+            })),
+          ],
+        }));
+        return trimmed.length;
+      },
       updateSkillset: (id, patch) =>
         set((s) => ({
           skillsets: s.skillsets.map((sk) => (sk.id === id ? { ...sk, ...patch } : sk)),
@@ -227,6 +263,21 @@ export const useStore = create<Store>()(
             { id: uid(), name: name ?? `Profile ${s.profiles.length + 1}`, skillsetIds: [] },
           ],
         })),
+      addProfiles: (names) => {
+        const trimmed = names.map((n) => n.trim()).filter(Boolean);
+        if (trimmed.length === 0) return 0;
+        set((s) => ({
+          profiles: [
+            ...s.profiles,
+            ...trimmed.map((n, i) => ({
+              id: uid(),
+              name: n || `Profile ${s.profiles.length + i + 1}`,
+              skillsetIds: [],
+            })),
+          ],
+        }));
+        return trimmed.length;
+      },
       updateProfile: (id, patch) =>
         set((s) => ({
           profiles: s.profiles.map((p) => (p.id === id ? { ...p, ...patch } : p)),
@@ -270,6 +321,25 @@ export const useStore = create<Store>()(
             },
           ],
         })),
+      addSystems: (names) => {
+        const trimmed = names.map((n) => n.trim()).filter(Boolean);
+        if (trimmed.length === 0) return 0;
+        set((s) => ({
+          systems: [
+            ...s.systems,
+            ...trimmed.map((n, i) => ({
+              id: uid(),
+              name: n || `System ${s.systems.length + i + 1}`,
+              critical: false,
+              requiredSkillsetIds: [],
+              requiredProfileIds: [],
+              cadence: structuredClone(DEFAULT_CADENCE),
+              effortPerEvent: { ...DEFAULT_EFFORT },
+            })),
+          ],
+        }));
+        return trimmed.length;
+      },
       updateSystem: (id, patch) =>
         set((s) => ({
           systems: s.systems.map((sys) => (sys.id === id ? { ...sys, ...patch } : sys)),

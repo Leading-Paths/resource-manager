@@ -1,16 +1,19 @@
 import { useState } from 'react';
-import { ChevronDown, ChevronRight, Plus, Trash2, Users, AlertCircle, RotateCcw, Sparkles } from 'lucide-react';
+import { ChevronDown, ChevronRight, Plus, Trash2, Users, AlertCircle, RotateCcw, Sparkles, ListPlus } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import { PriorityLadder } from '../components/PriorityLadder';
 import { memberCapacity } from '../domain/bau';
 import { PageHeader } from '../components/ui/PageHeader';
 import { EmptyState } from '../components/ui/EmptyState';
+import { BulkAddPanel } from '../components/ui/BulkAddPanel';
 import { toast } from '../components/ui/toast-store';
 import type { Member } from '../domain/types';
 
 export function TeamPage() {
   const members = useStore((s) => s.members);
   const addMember = useStore((s) => s.addMember);
+  const addMembers = useStore((s) => s.addMembers);
+  const [bulkOpen, setBulkOpen] = useState(false);
 
   const customizedCount = members.filter((m) => m.customized).length;
   const inheritingCount = members.length - customizedCount;
@@ -21,10 +24,28 @@ export function TeamPage() {
         title="Team"
         description="Define each member's weekly hours and how they split across priority groups. The group flagged as BAU is their weekly BAU capacity."
         actions={
-          <button onClick={() => addMember()} className="btn btn-primary">
-            <Plus className="w-4 h-4" /> Add member
-          </button>
+          <>
+            <button onClick={() => setBulkOpen((v) => !v)} className="btn btn-secondary">
+              <ListPlus className="w-4 h-4" /> Bulk add
+            </button>
+            <button onClick={() => addMember()} className="btn btn-primary">
+              <Plus className="w-4 h-4" /> Add member
+            </button>
+          </>
         }
+      />
+
+      <BulkAddPanel
+        open={bulkOpen}
+        onClose={() => setBulkOpen(false)}
+        title="Add multiple members"
+        placeholder={'Alice\nBob\nCarol Smith\nDave, Eve, Frank'}
+        hint="Each new member starts at 40h/week with the default template."
+        submitLabel="Add members"
+        onAdd={(names) => {
+          const added = addMembers(names);
+          toast('success', `Added ${added} member${added === 1 ? '' : 's'}`);
+        }}
       />
 
       <DefaultGroupsCard inheriting={inheritingCount} customized={customizedCount} />

@@ -1,4 +1,4 @@
-import { Plus, Server, Trash2, AlertTriangle, ChevronDown, ChevronRight } from 'lucide-react';
+import { Plus, Server, Trash2, AlertTriangle, ChevronDown, ChevronRight, ListPlus } from 'lucide-react';
 import { useState } from 'react';
 import { useStore } from '../store/useStore';
 import { EVENT_TYPES, EVENT_LABELS } from '../domain/types';
@@ -6,11 +6,14 @@ import type { EventType, System } from '../domain/types';
 import { systemWeeklyBau } from '../domain/bau';
 import { PageHeader } from '../components/ui/PageHeader';
 import { EmptyState } from '../components/ui/EmptyState';
+import { BulkAddPanel } from '../components/ui/BulkAddPanel';
 import { toast } from '../components/ui/toast-store';
 
 export function SystemsPage() {
   const systems = useStore((s) => s.systems);
   const addSystem = useStore((s) => s.addSystem);
+  const addSystems = useStore((s) => s.addSystems);
+  const [bulkOpen, setBulkOpen] = useState(false);
 
   return (
     <div className="space-y-5">
@@ -18,10 +21,28 @@ export function SystemsPage() {
         title="Systems"
         description="Each system has a release cadence and an effort-per-event figure. Weekly BAU hours = Σ (freq × effort) / 52."
         actions={
-          <button onClick={() => addSystem()} className="btn btn-primary">
-            <Plus className="w-4 h-4" /> Add system
-          </button>
+          <>
+            <button onClick={() => setBulkOpen((v) => !v)} className="btn btn-secondary">
+              <ListPlus className="w-4 h-4" /> Bulk add
+            </button>
+            <button onClick={() => addSystem()} className="btn btn-primary">
+              <Plus className="w-4 h-4" /> Add system
+            </button>
+          </>
         }
+      />
+
+      <BulkAddPanel
+        open={bulkOpen}
+        onClose={() => setBulkOpen(false)}
+        title="Add multiple systems"
+        placeholder={'Cloudcase\nCustomer portal\nReporting warehouse'}
+        hint="Each new system gets default cadence (26 team / 4 vendor / 1 LTS / 12 patch per year). Tune them after."
+        submitLabel="Add systems"
+        onAdd={(names) => {
+          const added = addSystems(names);
+          toast('success', `Added ${added} system${added === 1 ? '' : 's'}`);
+        }}
       />
 
       {systems.length === 0 ? (
