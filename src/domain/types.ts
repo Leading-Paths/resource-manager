@@ -63,6 +63,8 @@ export interface AllocationOverride {
 
 export interface AppState {
   schemaVersion: number;
+  /** Template ladder. New members and "reset to template" both clone this. Edits propagate to non-customized members. */
+  defaultPriorityGroups: PriorityGroup[];
   members: Member[];
   skillsets: Skillset[];
   profiles: Profile[];
@@ -94,8 +96,16 @@ export const DEFAULT_EFFORT: Record<EventType, number> = {
   patch: 4,
 };
 
+export const DEFAULT_PRIORITY_GROUPS: PriorityGroup[] = [
+  { id: 'tpl-leave', name: 'Leave', pctOfRemaining: 10, isBau: false },
+  { id: 'tpl-meetings', name: 'Meetings', pctOfRemaining: 15, isBau: false },
+  { id: 'tpl-projects', name: 'Projects', pctOfRemaining: 50, isBau: false },
+  { id: 'tpl-bau', name: 'BAU', pctOfRemaining: 100, isBau: true },
+];
+
 export const EMPTY_STATE: AppState = {
   schemaVersion: SCHEMA_VERSION,
+  defaultPriorityGroups: DEFAULT_PRIORITY_GROUPS,
   members: [],
   skillsets: [],
   profiles: [],

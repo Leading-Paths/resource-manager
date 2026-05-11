@@ -1,5 +1,5 @@
 import type { AppState } from './types';
-import { SCHEMA_VERSION, EMPTY_STATE } from './types';
+import { SCHEMA_VERSION, EMPTY_STATE, DEFAULT_PRIORITY_GROUPS } from './types';
 
 export class SchemaError extends Error {}
 
@@ -15,6 +15,9 @@ export function validateAppState(raw: unknown): AppState {
   const out: AppState = {
     ...EMPTY_STATE,
     schemaVersion: SCHEMA_VERSION,
+    defaultPriorityGroups: Array.isArray(r.defaultPriorityGroups)
+      ? (r.defaultPriorityGroups as AppState['defaultPriorityGroups'])
+      : DEFAULT_PRIORITY_GROUPS,
     members: Array.isArray(r.members) ? (r.members as AppState['members']) : [],
     skillsets: Array.isArray(r.skillsets) ? (r.skillsets as AppState['skillsets']) : [],
     profiles: Array.isArray(r.profiles) ? (r.profiles as AppState['profiles']) : [],

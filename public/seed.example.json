@@ -1,6 +1,12 @@
 {
   "schemaVersion": 1,
   "exportedAt": "2026-01-01T00:00:00.000Z",
+  "defaultPriorityGroups": [
+    { "id": "tpl-leave", "name": "Leave", "pctOfRemaining": 10, "isBau": false },
+    { "id": "tpl-meetings", "name": "Meetings", "pctOfRemaining": 15, "isBau": false },
+    { "id": "tpl-projects", "name": "Projects", "pctOfRemaining": 50, "isBau": false },
+    { "id": "tpl-bau", "name": "BAU", "pctOfRemaining": 100, "isBau": true }
+  ],
   "skillsets": [
     { "id": "sk-java", "name": "Java" },
     { "id": "sk-js", "name": "JavaScript" },
@@ -33,6 +39,7 @@
       "id": "m-bob",
       "name": "Bob",
       "weeklyHours": 40,
+      "customized": true,
       "priorityGroups": [
         { "id": "g-b-1", "name": "Leave", "pctOfRemaining": 10, "isBau": false },
         { "id": "g-b-2", "name": "Meetings", "pctOfRemaining": 20, "isBau": false },
@@ -46,6 +53,7 @@
       "id": "m-carol",
       "name": "Carol",
       "weeklyHours": 32,
+      "customized": true,
       "priorityGroups": [
         { "id": "g-c-1", "name": "Leave", "pctOfRemaining": 10, "isBau": false },
         { "id": "g-c-2", "name": "Meetings", "pctOfRemaining": 15, "isBau": false },

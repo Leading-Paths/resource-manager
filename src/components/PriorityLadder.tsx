@@ -7,6 +7,8 @@ interface Props {
   groups: PriorityGroup[];
   onChange: (groups: PriorityGroup[]) => void;
   onAddGroup: () => void;
+  /** When true, ignore weeklyHours and render values as %-of-week instead of hours. */
+  templateMode?: boolean;
 }
 
 // Cycle of subtle colors for non-BAU groups
@@ -20,17 +22,22 @@ const PALETTE = [
   'bg-lime-300',
 ];
 
-export function PriorityLadder({ weeklyHours, groups, onChange, onAddGroup }: Props) {
+export function PriorityLadder({ weeklyHours, groups, onChange, onAddGroup, templateMode }: Props) {
+  // In template mode, treat the week as 100 units so `groupHours` reads naturally as percentages.
+  const baseTotal = templateMode ? 100 : weeklyHours;
   const { groupHours, remainingAfter, bauHours } = memberCapacity({
     id: '_',
     name: '_',
-    weeklyHours,
+    weeklyHours: baseTotal,
     priorityGroups: groups,
     skillsetIds: [],
     profileIds: [],
   });
 
-  const totalHours = weeklyHours;
+  const totalHours = baseTotal;
+  const unit = templateMode ? '%' : 'h';
+  const fmtValue = (v: number) => (templateMode ? `${v.toFixed(1)}%` : `${v.toFixed(2)}h`);
+  const fmtCell = (v: number) => (templateMode ? `${v.toFixed(1)}%` : v.toFixed(2));
 
   function update(idx: number, patch: Partial<PriorityGroup>) {
     onChange(groups.map((g, i) => (i === idx ? { ...g, ...patch } : g)));
@@ -65,7 +72,7 @@ export function PriorityLadder({ weeklyHours, groups, onChange, onAddGroup }: Pr
                   key={g.id}
                   className={color}
                   style={{ width: `${pct}%` }}
-                  title={`${g.name}: ${h.toFixed(2)}h`}
+                  title={`${g.name}: ${fmtValue(h)}`}
                 />
               );
             })}
@@ -78,7 +85,7 @@ export function PriorityLadder({ weeklyHours, groups, onChange, onAddGroup }: Pr
                 <span key={g.id} className="inline-flex items-center gap-1">
                   <span className={`inline-block w-2.5 h-2.5 rounded-sm ${color}`} />
                   {g.name}
-                  <span className="tabular text-slate-500">{h.toFixed(1)}h</span>
+                  <span className="tabular text-slate-500">{fmtValue(h)}</span>
                   {g.isBau && <span className="badge badge-success badge-info py-0 px-1.5">BAU</span>}
                 </span>
               );
@@ -87,7 +94,7 @@ export function PriorityLadder({ weeklyHours, groups, onChange, onAddGroup }: Pr
               <span className="inline-flex items-center gap-1">
                 <span className="inline-block w-2.5 h-2.5 rounded-sm bg-slate-300" />
                 Unallocated
-                <span className="tabular text-slate-500">{remainingAfter.toFixed(1)}h</span>
+                <span className="tabular text-slate-500">{fmtValue(remainingAfter)}</span>
               </span>
             )}
           </div>
@@ -102,7 +109,7 @@ export function PriorityLadder({ weeklyHours, groups, onChange, onAddGroup }: Pr
               <th className="w-8 text-left px-2 py-1.5">#</th>
               <th className="text-left px-2 py-1.5">Group</th>
               <th className="w-32 text-left px-2 py-1.5">% of remaining</th>
-              <th className="w-20 text-right px-2 py-1.5">Hours</th>
+              <th className="w-20 text-right px-2 py-1.5">{templateMode ? '% of week' : 'Hours'}</th>
               <th className="w-16 text-center px-2 py-1.5">BAU</th>
               <th className="w-28 px-2 py-1.5" />
             </tr>
@@ -134,7 +141,7 @@ export function PriorityLadder({ weeklyHours, groups, onChange, onAddGroup }: Pr
                   </div>
                 </td>
                 <td className="px-2 py-1 tabular text-right text-slate-700">
-                  {(groupHours[g.id] ?? 0).toFixed(2)}
+                  {fmtCell(groupHours[g.id] ?? 0)}
                 </td>
                 <td className="px-2 py-1 text-center">
                   <button
@@ -185,9 +192,9 @@ export function PriorityLadder({ weeklyHours, groups, onChange, onAddGroup }: Pr
             ))}
             <tr className="bg-slate-50 border-t border-slate-200 text-xs text-slate-500">
               <td colSpan={3} className="px-2 py-1.5 text-right">
-                BAU capacity <span className="font-semibold text-emerald-700 tabular">{bauHours.toFixed(2)}h</span>
+                {templateMode ? 'BAU share' : 'BAU capacity'} <span className="font-semibold text-emerald-700 tabular">{templateMode ? `${bauHours.toFixed(1)}${unit}` : `${bauHours.toFixed(2)}${unit}`}</span>
                 <span className="mx-2 text-slate-300">·</span>
-                Unallocated <span className="tabular">{remainingAfter.toFixed(2)}h</span>
+                Unallocated <span className="tabular">{templateMode ? `${remainingAfter.toFixed(1)}${unit}` : `${remainingAfter.toFixed(2)}${unit}`}</span>
               </td>
               <td colSpan={3} className="px-2 py-1.5 text-right">
                 <button type="button" onClick={onAddGroup} className="btn btn-secondary btn-xs">

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ChevronDown, ChevronRight, Plus, Trash2, Users, AlertCircle, RotateCcw } from 'lucide-react';
+import { ChevronDown, ChevronRight, Plus, Trash2, Users, AlertCircle, RotateCcw, Sparkles } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import { PriorityLadder } from '../components/PriorityLadder';
 import { memberCapacity } from '../domain/bau';
@@ -13,7 +13,7 @@ export function TeamPage() {
   const addMember = useStore((s) => s.addMember);
 
   const customizedCount = members.filter((m) => m.customized).length;
-  const uncustomizedCount = members.length - customizedCount;
+  const inheritingCount = members.length - customizedCount;
 
   return (
     <div className="space-y-5">
@@ -27,15 +27,13 @@ export function TeamPage() {
         }
       />
 
-      {members.length > 0 && (
-        <BulkAddGroup uncustomized={uncustomizedCount} customized={customizedCount} />
-      )}
+      <DefaultGroupsCard inheriting={inheritingCount} customized={customizedCount} />
 
       {members.length === 0 ? (
         <EmptyState
           icon={Users}
           title="No team members yet"
-          description="Add a team member to define their weekly hours and how they split time across priority groups."
+          description="Add a team member to define their weekly hours and how they split time across priority groups. New members start from the default template above."
           action={
             <button onClick={() => addMember()} className="btn btn-primary">
               <Plus className="w-4 h-4" /> Add member
@@ -53,6 +51,57 @@ export function TeamPage() {
   );
 }
 
+function DefaultGroupsCard({ inheriting, customized }: { inheriting: number; customized: number }) {
+  const defaults = useStore((s) => s.defaultPriorityGroups);
+  const setDefaults = useStore((s) => s.setDefaultPriorityGroups);
+  const addDefaultGroup = useStore((s) => s.addDefaultGroup);
+  const [open, setOpen] = useState(true);
+
+  return (
+    <section className="card overflow-hidden">
+      <div className="card-header">
+        <div className="flex items-center gap-2 flex-1">
+          <button
+            type="button"
+            onClick={() => setOpen((v) => !v)}
+            className="icon-btn"
+            aria-label={open ? 'Collapse' : 'Expand'}
+          >
+            {open ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+          </button>
+          <div className="flex items-center gap-2 text-brand-600">
+            <Sparkles className="w-4 h-4" />
+            <h2 className="section-title text-slate-900">Default priority groups</h2>
+          </div>
+        </div>
+        <div className="text-xs text-slate-500">
+          <span className="font-semibold text-slate-900">{inheriting}</span> follow this template
+          <span className="mx-1.5 text-slate-300">·</span>
+          <span className="font-semibold text-slate-900">{customized}</span> customized are independent
+        </div>
+      </div>
+      {open && (
+        <div className="card-body space-y-2">
+          <p className="text-xs text-slate-500">
+            New members inherit these groups, and any change here (add, remove, reorder, rename, % or BAU flag) is mirrored to every non-customized member. Customized members keep their own ladder until you click <span className="inline-flex items-center gap-0.5 align-middle"><RotateCcw className="w-3 h-3" /></span> on their card.
+          </p>
+          <PriorityLadder
+            weeklyHours={40}
+            groups={defaults}
+            onChange={(g) => {
+              const { synced } = setDefaults(g);
+              // Quiet pass-through edits would spam toasts; we don't toast here. Member reset uses a toast.
+              void synced;
+            }}
+            onAddGroup={addDefaultGroup}
+            templateMode
+          />
+        </div>
+      )}
+    </section>
+  );
+}
+
 function MemberCard({ member }: { member: Member }) {
   const [open, setOpen] = useState(true);
   const updateMember = useStore((s) => s.updateMember);
@@ -67,6 +116,13 @@ function MemberCard({ member }: { member: Member }) {
     if (confirm(`Delete ${member.name}? This also clears their SME entries and allocation overrides.`)) {
       deleteMember(member.id);
       toast('info', `Removed ${member.name}`);
+    }
+  }
+
+  function onResetToTemplate() {
+    if (confirm(`Reset ${member.name}'s priority ladder to the default template? Their current ladder will be replaced.`)) {
+      resetCustom(member.id);
+      toast('info', `${member.name} now follows the default template`);
     }
   }
 
@@ -105,14 +161,14 @@ function MemberCard({ member }: { member: Member }) {
             <span className="opacity-60">· {utilPct.toFixed(0)}%</span>
           </span>
           {member.customized && (
-            <span className="badge badge-warning" title="This member's ladder has been edited individually. 'Add group to all' will skip this member.">
+            <span className="badge badge-warning" title="This member's ladder has been edited individually. Template changes will not affect them.">
               <AlertCircle className="w-3 h-3" />
               Customized
               <button
                 type="button"
-                onClick={() => resetCustom(member.id)}
+                onClick={onResetToTemplate}
                 className="ml-1 inline-flex items-center hover:text-amber-950"
-                title="Restore to template so future bulk additions apply"
+                title="Reset to default template"
               >
                 <RotateCcw className="w-3 h-3" />
               </button>
@@ -133,70 +189,6 @@ function MemberCard({ member }: { member: Member }) {
           />
         </div>
       )}
-    </section>
-  );
-}
-
-function BulkAddGroup({ uncustomized, customized }: { uncustomized: number; customized: number }) {
-  const addGroupToAll = useStore((s) => s.addGroupToAll);
-  const [name, setName] = useState('');
-  const [pct, setPct] = useState<number>(10);
-
-  function submit(e: React.FormEvent) {
-    e.preventDefault();
-    const trimmed = name.trim();
-    if (!trimmed) return;
-    const { affected, skipped } = addGroupToAll({ name: trimmed, pctOfRemaining: pct });
-    setName('');
-    toast(
-      affected > 0 ? 'success' : 'info',
-      `Added “${trimmed}” to ${affected} member${affected === 1 ? '' : 's'}${
-        skipped > 0 ? `, skipped ${skipped} customized` : ''
-      }`
-    );
-  }
-
-  return (
-    <section className="card">
-      <div className="card-header">
-        <div>
-          <h2 className="section-title">Add a group to everyone</h2>
-          <p className="section-sub">Inserts before each member's BAU group. Customized members are skipped.</p>
-        </div>
-        <div className="text-xs text-slate-500">
-          Will apply to <span className="font-semibold text-slate-900">{uncustomized}</span>
-          <span className="mx-1.5 text-slate-300">·</span>
-          Skip <span className="font-semibold text-slate-900">{customized}</span> customized
-        </div>
-      </div>
-      <form onSubmit={submit} className="card-body-tight flex items-center gap-2 flex-wrap">
-        <input
-          type="text"
-          placeholder="Group name (e.g. On-call)"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          className="input flex-1 min-w-[200px]"
-        />
-        <div className="flex items-center gap-1.5">
-          <input
-            type="number"
-            min={0}
-            max={100}
-            step={1}
-            value={pct}
-            onChange={(e) => setPct(Number(e.target.value))}
-            className="input w-20"
-          />
-          <span className="text-xs text-slate-500">% of remaining</span>
-        </div>
-        <button
-          type="submit"
-          disabled={uncustomized === 0 || !name.trim()}
-          className="btn btn-primary"
-        >
-          <Plus className="w-4 h-4" /> Add to all
-        </button>
-      </form>
     </section>
   );
 }

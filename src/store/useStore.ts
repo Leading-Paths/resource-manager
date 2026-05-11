@@ -12,6 +12,17 @@ function uid(): ID {
   return Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4);
 }
 
+function cloneGroupsWithFreshIds(groups: PriorityGroup[]): PriorityGroup[] {
+  return groups.map((g) => ({ ...g, id: uid() }));
+}
+
+function normalizeBau(groups: PriorityGroup[]): PriorityGroup[] {
+  const bauCount = groups.filter((g) => g.isBau).length;
+  if (bauCount === 1) return groups;
+  // Fall back to the last group as the BAU residual if zero or multiple are flagged.
+  return groups.map((g, i) => ({ ...g, isBau: i === groups.length - 1 }));
+}
+
 interface Actions {
   replaceAll: (next: AppState) => void;
   reset: () => void;
@@ -21,7 +32,11 @@ interface Actions {
   deleteMember: (id: ID) => void;
   setMemberPriorityGroups: (id: ID, groups: PriorityGroup[]) => void;
   addMemberGroup: (id: ID) => void;
-  addGroupToAll: (input: { name: string; pctOfRemaining: number }) => { affected: number; skipped: number };
+  /** Replace the default ladder. Non-customized members are re-synced. Returns how many were synced and skipped. */
+  setDefaultPriorityGroups: (groups: PriorityGroup[]) => { synced: number; skipped: number };
+  /** Append a new placeholder group to the defaults. */
+  addDefaultGroup: () => void;
+  /** Snap a member's ladder back to the current defaults and clear the customized flag. */
   resetMemberCustomization: (id: ID) => void;
   toggleMemberSkillset: (memberId: ID, skillsetId: ID) => void;
   toggleMemberProfile: (memberId: ID, profileId: ID) => void;
@@ -68,12 +83,7 @@ export const useStore = create<Store>()(
               id: uid(),
               name: name ?? `Member ${s.members.length + 1}`,
               weeklyHours: 40,
-              priorityGroups: [
-                { id: uid(), name: 'Leave', pctOfRemaining: 10, isBau: false },
-                { id: uid(), name: 'Meetings', pctOfRemaining: 15, isBau: false },
-                { id: uid(), name: 'Projects', pctOfRemaining: 50, isBau: false },
-                { id: uid(), name: 'BAU', pctOfRemaining: 100, isBau: true },
-              ],
+              priorityGroups: cloneGroupsWithFreshIds(s.defaultPriorityGroups),
               skillsetIds: [],
               profileIds: [],
             },
@@ -92,11 +102,7 @@ export const useStore = create<Store>()(
           },
         })),
       setMemberPriorityGroups: (id, groups) => {
-        const bauGroups = groups.filter((g) => g.isBau);
-        const normalized =
-          bauGroups.length === 1
-            ? groups
-            : groups.map((g, i) => ({ ...g, isBau: i === groups.length - 1 }));
+        const normalized = normalizeBau(groups);
         set((s) => ({
           members: s.members.map((m) =>
             m.id === id ? { ...m, priorityGroups: normalized, customized: true } : m
@@ -118,34 +124,53 @@ export const useStore = create<Store>()(
               : m
           ),
         })),
-      addGroupToAll: ({ name, pctOfRemaining }) => {
-        const members = get().members;
-        let affected = 0;
+      setDefaultPriorityGroups: (groups) => {
+        const normalized = normalizeBau(groups);
+        let synced = 0;
         let skipped = 0;
-        const nextMembers = members.map((m) => {
-          if (m.customized) {
-            skipped += 1;
-            return m;
-          }
-          affected += 1;
-          const bauIdx = m.priorityGroups.findIndex((g) => g.isBau);
-          const insertAt = bauIdx === -1 ? m.priorityGroups.length : bauIdx;
+        set((s) => ({
+          defaultPriorityGroups: normalized,
+          members: s.members.map((m) => {
+            if (m.customized) {
+              skipped += 1;
+              return m;
+            }
+            synced += 1;
+            return { ...m, priorityGroups: cloneGroupsWithFreshIds(normalized) };
+          }),
+        }));
+        return { synced, skipped };
+      },
+      addDefaultGroup: () =>
+        set((s) => {
+          const bauIdx = s.defaultPriorityGroups.findIndex((g) => g.isBau);
+          const insertAt = bauIdx === -1 ? s.defaultPriorityGroups.length : bauIdx;
           const newGroup: PriorityGroup = {
             id: uid(),
-            name,
-            pctOfRemaining,
+            name: 'New group',
+            pctOfRemaining: 0,
             isBau: false,
           };
-          const groups = [...m.priorityGroups];
-          groups.splice(insertAt, 0, newGroup);
-          return { ...m, priorityGroups: groups };
-        });
-        set({ members: nextMembers });
-        return { affected, skipped };
-      },
+          const nextDefaults = [...s.defaultPriorityGroups];
+          nextDefaults.splice(insertAt, 0, newGroup);
+          return {
+            defaultPriorityGroups: nextDefaults,
+            members: s.members.map((m) =>
+              m.customized ? m : { ...m, priorityGroups: cloneGroupsWithFreshIds(nextDefaults) }
+            ),
+          };
+        }),
       resetMemberCustomization: (id) =>
         set((s) => ({
-          members: s.members.map((m) => (m.id === id ? { ...m, customized: false } : m)),
+          members: s.members.map((m) =>
+            m.id === id
+              ? {
+                  ...m,
+                  customized: false,
+                  priorityGroups: cloneGroupsWithFreshIds(s.defaultPriorityGroups),
+                }
+              : m
+          ),
         })),
       toggleMemberSkillset: (memberId, skillsetId) =>
         set((s) => ({
