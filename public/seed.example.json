@@ -1,0 +1,114 @@
+{
+  "schemaVersion": 1,
+  "exportedAt": "2026-01-01T00:00:00.000Z",
+  "skillsets": [
+    { "id": "sk-java", "name": "Java" },
+    { "id": "sk-js", "name": "JavaScript" },
+    { "id": "sk-ts", "name": "TypeScript" },
+    { "id": "sk-node", "name": "Node.js" },
+    { "id": "sk-dotnet", "name": ".NET" },
+    { "id": "sk-cloudcase", "name": "Cloudcase" },
+    { "id": "sk-rulebook", "name": "Rulebook" },
+    { "id": "sk-sql", "name": "SQL" }
+  ],
+  "profiles": [
+    { "id": "pr-cloudcase", "name": "Cloudcase profile", "skillsetIds": ["sk-cloudcase", "sk-rulebook", "sk-java", "sk-js"] },
+    { "id": "pr-backend", "name": "Backend engineer", "skillsetIds": ["sk-ts", "sk-node", "sk-dotnet", "sk-sql"] }
+  ],
+  "members": [
+    {
+      "id": "m-alice",
+      "name": "Alice",
+      "weeklyHours": 40,
+      "priorityGroups": [
+        { "id": "g-a-1", "name": "Leave", "pctOfRemaining": 10, "isBau": false },
+        { "id": "g-a-2", "name": "Meetings", "pctOfRemaining": 15, "isBau": false },
+        { "id": "g-a-3", "name": "Projects", "pctOfRemaining": 50, "isBau": false },
+        { "id": "g-a-4", "name": "BAU", "pctOfRemaining": 100, "isBau": true }
+      ],
+      "skillsetIds": [],
+      "profileIds": ["pr-cloudcase"]
+    },
+    {
+      "id": "m-bob",
+      "name": "Bob",
+      "weeklyHours": 40,
+      "priorityGroups": [
+        { "id": "g-b-1", "name": "Leave", "pctOfRemaining": 10, "isBau": false },
+        { "id": "g-b-2", "name": "Meetings", "pctOfRemaining": 20, "isBau": false },
+        { "id": "g-b-3", "name": "Projects", "pctOfRemaining": 60, "isBau": false },
+        { "id": "g-b-4", "name": "BAU", "pctOfRemaining": 100, "isBau": true }
+      ],
+      "skillsetIds": ["sk-sql"],
+      "profileIds": ["pr-backend"]
+    },
+    {
+      "id": "m-carol",
+      "name": "Carol",
+      "weeklyHours": 32,
+      "priorityGroups": [
+        { "id": "g-c-1", "name": "Leave", "pctOfRemaining": 10, "isBau": false },
+        { "id": "g-c-2", "name": "Meetings", "pctOfRemaining": 15, "isBau": false },
+        { "id": "g-c-3", "name": "Projects", "pctOfRemaining": 30, "isBau": false },
+        { "id": "g-c-4", "name": "BAU", "pctOfRemaining": 100, "isBau": true }
+      ],
+      "skillsetIds": [],
+      "profileIds": ["pr-cloudcase", "pr-backend"]
+    }
+  ],
+  "systems": [
+    {
+      "id": "sys-cloudcase",
+      "name": "Cloudcase",
+      "critical": true,
+      "requiredSkillsetIds": [],
+      "requiredProfileIds": ["pr-cloudcase"],
+      "cadence": {
+        "team": { "freqPerYear": 26 },
+        "vendor": { "freqPerYear": 4 },
+        "lts": { "freqPerYear": 1 },
+        "patch": { "freqPerYear": 12 }
+      },
+      "effortPerEvent": { "team": 8, "vendor": 16, "lts": 24, "patch": 4 }
+    },
+    {
+      "id": "sys-portal",
+      "name": "Customer portal",
+      "critical": true,
+      "requiredSkillsetIds": ["sk-ts"],
+      "requiredProfileIds": ["pr-backend"],
+      "cadence": {
+        "team": { "freqPerYear": 52 },
+        "vendor": { "freqPerYear": null },
+        "lts": { "freqPerYear": null },
+        "patch": { "freqPerYear": 24 }
+      },
+      "effortPerEvent": { "team": 6, "vendor": 0, "lts": 0, "patch": 3 }
+    },
+    {
+      "id": "sys-reporting",
+      "name": "Reporting warehouse",
+      "critical": false,
+      "requiredSkillsetIds": ["sk-sql"],
+      "requiredProfileIds": [],
+      "cadence": {
+        "team": { "freqPerYear": 12 },
+        "vendor": { "freqPerYear": 2 },
+        "lts": { "freqPerYear": null },
+        "patch": { "freqPerYear": 6 }
+      },
+      "effortPerEvent": { "team": 4, "vendor": 8, "lts": 0, "patch": 2 }
+    }
+  ],
+  "sme": [
+    { "memberId": "m-alice", "systemId": "sys-cloudcase", "level": 2 },
+    { "memberId": "m-alice", "systemId": "sys-portal", "level": 1 },
+    { "memberId": "m-bob", "systemId": "sys-cloudcase", "level": 1 },
+    { "memberId": "m-bob", "systemId": "sys-portal", "level": 2 },
+    { "memberId": "m-bob", "systemId": "sys-reporting", "level": 2 },
+    { "memberId": "m-carol", "systemId": "sys-cloudcase", "level": 2 },
+    { "memberId": "m-carol", "systemId": "sys-portal", "level": 2 },
+    { "memberId": "m-carol", "systemId": "sys-reporting", "level": 1 }
+  ],
+  "overrides": { "allocationHours": [] }
+}
