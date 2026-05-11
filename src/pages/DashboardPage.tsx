@@ -1,3 +1,4 @@
+import { useMemo, useState } from 'react';
 import {
   AlertTriangle,
   CheckCircle2,
@@ -8,6 +9,7 @@ import {
   TrendingDown,
   TrendingUp,
   Server,
+  Archive,
 } from 'lucide-react';
 import { useStore, overrideHours } from '../store/useStore';
 import {
@@ -21,6 +23,9 @@ import {
 import { computeAllocations } from '../domain/allocation';
 import { PageHeader } from '../components/ui/PageHeader';
 import { EmptyState } from '../components/ui/EmptyState';
+import type { AppState } from '../domain/types';
+
+type FilterMode = 'active' | 'all';
 
 function fmt(n: number): string {
   return n.toFixed(2);
@@ -35,6 +40,15 @@ function deficitClass(d: number): string {
 export function DashboardPage() {
   const state = useStore();
   const setOverride = useStore((s) => s.setOverride);
+  const [filterMode, setFilterMode] = useState<FilterMode>('active');
+
+  const eolCount = state.systems.filter((s) => s.endOfLife).length;
+  const hasEol = eolCount > 0;
+
+  const viewState: AppState = useMemo(() => {
+    if (filterMode === 'all' || !hasEol) return state;
+    return { ...state, systems: state.systems.filter((s) => !s.endOfLife) };
+  }, [state, filterMode, hasEol]);
 
   if (state.members.length === 0 && state.systems.length === 0) {
     return (
@@ -52,10 +66,10 @@ export function DashboardPage() {
     );
   }
 
-  const systems = deriveSystemRollups(state);
-  const memberRollups = deriveMemberRollups(state);
-  const org = deriveOrgRollup(state);
-  const alloc = computeAllocations(state);
+  const systems = deriveSystemRollups(viewState);
+  const memberRollups = deriveMemberRollups(viewState);
+  const org = deriveOrgRollup(viewState);
+  const alloc = computeAllocations(viewState);
 
   const utilization =
     org.totalRequired > 0
@@ -67,6 +81,15 @@ export function DashboardPage() {
       <PageHeader
         title="Dashboard"
         description="Resource coverage and BAU capacity at a glance."
+        actions={
+          hasEol ? (
+            <FilterToggle
+              mode={filterMode}
+              onChange={setFilterMode}
+              eolCount={eolCount}
+            />
+          ) : undefined
+        }
       />
 
       {/* Hero stats */}
@@ -183,7 +206,7 @@ export function DashboardPage() {
       </section>
 
       {/* Allocation grid */}
-      {state.members.length > 0 && state.systems.length > 0 && (
+      {viewState.members.length > 0 && viewState.systems.length > 0 && (
         <section>
           <div className="flex items-end justify-between mb-2 gap-2 flex-wrap">
             <div>
@@ -199,21 +222,26 @@ export function DashboardPage() {
                 <thead>
                   <tr>
                     <th>Member \ System</th>
-                    {state.systems.map((sys) => (
-                      <th key={sys.id}>{sys.name}</th>
+                    {viewState.systems.map((sys) => (
+                      <th key={sys.id}>
+                        <span className="inline-flex items-center gap-1">
+                          {sys.name}
+                          {sys.endOfLife && <Archive className="w-3 h-3 text-slate-400" />}
+                        </span>
+                      </th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
-                  {state.members.map((m) => {
+                  {viewState.members.map((m) => {
                     const a = alloc.byMember[m.id];
                     return (
                       <tr key={m.id}>
                         <th>{m.name}</th>
-                        {state.systems.map((sys) => {
+                        {viewState.systems.map((sys) => {
                           const isL2 = a?.l2SystemIds.includes(sys.id);
                           const hours = a?.perSystemHours[sys.id] ?? 0;
-                          const override = overrideHours(state, m.id, sys.id);
+                          const override = overrideHours(viewState, m.id, sys.id);
                           if (!isL2) {
                             return (
                               <td key={sys.id} className="text-center text-slate-300">
@@ -262,14 +290,17 @@ export function DashboardPage() {
 }
 
 function SystemRow({ rollup: r }: { rollup: SystemRollup }) {
+  const isEol = !!r.system.endOfLife;
   return (
-    <tr className={r.system.critical ? 'bg-rose-50/30' : undefined}>
+    <tr className={r.system.critical && !isEol ? 'bg-rose-50/30' : isEol ? 'bg-slate-50 text-slate-500' : undefined}>
       <th>
         <div className="flex items-center gap-1.5">
-          {r.system.critical && (
+          {r.system.critical && !isEol && (
             <AlertTriangle className="w-3.5 h-3.5 text-rose-500" />
           )}
-          <span>{r.system.name}</span>
+          {isEol && <Archive className="w-3.5 h-3.5 text-slate-400" />}
+          <span className={isEol ? 'line-through decoration-slate-400 decoration-1' : ''}>{r.system.name}</span>
+          {isEol && <span className="badge badge-neutral">EOL</span>}
         </div>
       </th>
       <td>
@@ -409,6 +440,50 @@ function StatTile({ icon: Icon, label, value, sub, tone }: StatTileProps) {
       </div>
       <div className="stat-value">{value}</div>
       {sub && <div className="text-xs text-slate-500">{sub}</div>}
+    </div>
+  );
+}
+
+function FilterToggle({
+  mode,
+  onChange,
+  eolCount,
+}: {
+  mode: FilterMode;
+  onChange: (m: FilterMode) => void;
+  eolCount: number;
+}) {
+  return (
+    <div
+      role="radiogroup"
+      aria-label="System filter"
+      className="inline-flex rounded-md border border-slate-300 bg-white shadow-soft overflow-hidden"
+    >
+      <button
+        type="button"
+        role="radio"
+        aria-checked={mode === 'active'}
+        onClick={() => onChange('active')}
+        className={`px-3 py-1.5 text-sm inline-flex items-center gap-1.5 transition-colors ${
+          mode === 'active' ? 'bg-brand-600 text-white' : 'text-slate-600 hover:bg-slate-50'
+        }`}
+        title={`Exclude ${eolCount} end-of-life system${eolCount === 1 ? '' : 's'}`}
+      >
+        Active only
+      </button>
+      <button
+        type="button"
+        role="radio"
+        aria-checked={mode === 'all'}
+        onClick={() => onChange('all')}
+        className={`px-3 py-1.5 text-sm inline-flex items-center gap-1.5 transition-colors border-l border-slate-300 ${
+          mode === 'all' ? 'bg-brand-600 text-white' : 'text-slate-600 hover:bg-slate-50'
+        }`}
+        title="Include EOL systems"
+      >
+        <Archive className="w-3.5 h-3.5" />
+        All ({eolCount} EOL)
+      </button>
     </div>
   );
 }

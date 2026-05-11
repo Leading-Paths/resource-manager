@@ -1,4 +1,4 @@
-import { Plus, Server, Trash2, AlertTriangle, ChevronDown, ChevronRight, ListPlus } from 'lucide-react';
+import { Plus, Server, Trash2, AlertTriangle, ChevronDown, ChevronRight, ListPlus, Archive } from 'lucide-react';
 import { useState } from 'react';
 import { useStore } from '../store/useStore';
 import { EVENT_TYPES, EVENT_LABELS } from '../domain/types';
@@ -76,9 +76,11 @@ function SystemCard({ system: sys }: { system: System }) {
   const setCadence = useStore((s) => s.setSystemCadence);
   const setEffort = useStore((s) => s.setSystemEffort);
   const setCritical = useStore((s) => s.setSystemCritical);
+  const setEndOfLife = useStore((s) => s.setSystemEndOfLife);
   const toggleSk = useStore((s) => s.toggleSystemRequiredSkillset);
   const toggleP = useStore((s) => s.toggleSystemRequiredProfile);
   const weeklyBau = systemWeeklyBau(sys);
+  const isEol = !!sys.endOfLife;
 
   function onDelete() {
     if (confirm(`Delete system "${sys.name}"? This also removes its SME entries and allocation overrides.`)) {
@@ -88,7 +90,7 @@ function SystemCard({ system: sys }: { system: System }) {
   }
 
   return (
-    <section className={`card overflow-hidden ${sys.critical ? 'ring-1 ring-rose-200' : ''}`}>
+    <section className={`card overflow-hidden ${sys.critical && !isEol ? 'ring-1 ring-rose-200' : ''} ${isEol ? 'opacity-75' : ''}`}>
       <div className="card-header">
         <div className="flex items-center gap-3 flex-1 min-w-0 flex-wrap">
           <button
@@ -103,7 +105,7 @@ function SystemCard({ system: sys }: { system: System }) {
             type="text"
             value={sys.name}
             onChange={(e) => updateSystem(sys.id, { name: e.target.value })}
-            className="input-inline input-inline-lg flex-1 min-w-[160px] max-w-md"
+            className={`input-inline input-inline-lg flex-1 min-w-[160px] max-w-md ${isEol ? 'line-through decoration-slate-400 decoration-1 text-slate-500' : ''}`}
           />
           <label className="inline-flex items-center gap-1.5 text-sm text-slate-600 cursor-pointer">
             <input
@@ -117,6 +119,23 @@ function SystemCard({ system: sys }: { system: System }) {
               Critical
             </span>
           </label>
+          <label className="inline-flex items-center gap-1.5 text-sm text-slate-600 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={isEol}
+              onChange={(e) => setEndOfLife(sys.id, e.target.checked)}
+              className="w-4 h-4 rounded border-slate-300 text-slate-600 focus:ring-slate-500"
+            />
+            <span className="inline-flex items-center gap-1">
+              <Archive className={`w-3.5 h-3.5 ${isEol ? 'text-slate-700' : 'text-slate-300'}`} />
+              End of life
+            </span>
+          </label>
+          {isEol && (
+            <span className="badge badge-neutral" title="Excluded from the dashboard's Active-only view">
+              <Archive className="w-3 h-3" /> EOL
+            </span>
+          )}
           <span className="badge badge-info" title="Derived weekly BAU hours">
             BAU <span className="tabular ml-0.5">{weeklyBau.toFixed(2)}h/wk</span>
           </span>

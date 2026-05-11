@@ -62,6 +62,7 @@ interface Actions {
   setSystemCadence: (systemId: ID, event: keyof System['cadence'], freqPerYear: number | null) => void;
   setSystemEffort: (systemId: ID, event: keyof System['effortPerEvent'], hours: number) => void;
   setSystemCritical: (systemId: ID, critical: boolean) => void;
+  setSystemEndOfLife: (systemId: ID, endOfLife: boolean) => void;
 
   setSme: (memberId: ID, systemId: ID, level: SmeLevel) => void;
 
@@ -397,6 +398,10 @@ export const useStore = create<Store>()(
       setSystemCritical: (systemId, critical) =>
         set((s) => ({
           systems: s.systems.map((sys) => (sys.id === systemId ? { ...sys, critical } : sys)),
+        })),
+      setSystemEndOfLife: (systemId, endOfLife) =>
+        set((s) => ({
+          systems: s.systems.map((sys) => (sys.id === systemId ? { ...sys, endOfLife } : sys)),
         })),
 
       setSme: (memberId, systemId, level) =>

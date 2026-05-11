@@ -97,6 +97,7 @@
       "id": "sys-reporting",
       "name": "Reporting warehouse",
       "critical": false,
+      "endOfLife": true,
       "requiredSkillsetIds": ["sk-sql"],
       "requiredProfileIds": [],
       "cadence": {

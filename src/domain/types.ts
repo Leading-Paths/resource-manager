@@ -41,6 +41,8 @@ export interface System {
   id: ID;
   name: string;
   critical: boolean;
+  /** End-of-life systems are excluded from the dashboard's "Active only" view but kept in state. */
+  endOfLife?: boolean;
   requiredSkillsetIds: ID[];
   requiredProfileIds: ID[];
   cadence: Record<EventType, Cadence>;

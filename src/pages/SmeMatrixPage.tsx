@@ -1,4 +1,4 @@
-import { Grid3x3, AlertTriangle } from 'lucide-react';
+import { Grid3x3, AlertTriangle, Archive } from 'lucide-react';
 import { useStore, smeLevel } from '../store/useStore';
 import { LevelCell } from '../components/LevelCell';
 import { PageHeader } from '../components/ui/PageHeader';
@@ -43,9 +43,14 @@ export function SmeMatrixPage() {
                 {state.systems.map((sys) => (
                   <th key={sys.id}>
                     <div className="inline-flex items-center gap-1">
-                      {sys.name}
-                      {sys.critical && (
+                      <span className={sys.endOfLife ? 'line-through decoration-slate-400 decoration-1 text-slate-500' : ''}>
+                        {sys.name}
+                      </span>
+                      {sys.critical && !sys.endOfLife && (
                         <AlertTriangle className="w-3 h-3 text-rose-500" />
+                      )}
+                      {sys.endOfLife && (
+                        <Archive className="w-3 h-3 text-slate-400" />
                       )}
                     </div>
                   </th>
