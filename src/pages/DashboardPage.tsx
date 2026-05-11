@@ -370,16 +370,27 @@ function CapacityBar({ required, allocated }: { required: number; allocated: num
     return <span className="text-xs text-slate-400 italic">no req</span>;
   }
   const ratio = allocated / required;
-  const pct = Math.min(150, ratio * 100); // cap visual at 150%
-  const tone = ratio >= 1 ? 'good' : ratio >= 0.5 ? 'warn' : 'bad';
+  const pct = Math.min(150, ratio * 100); // cap visual at 150% of required
+  const fillColor =
+    ratio >= 1 ? 'bg-emerald-500' : ratio >= 0.5 ? 'bg-amber-500' : 'bg-rose-500';
+  const labelColor =
+    ratio >= 1 ? 'text-emerald-700' : ratio >= 0.5 ? 'text-amber-700' : 'text-rose-700';
   return (
-    <div className="pbar w-full max-w-[140px]" title={`${allocated.toFixed(2)} of ${required.toFixed(2)}h`}>
-      <div
-        className={`pbar-fill pbar-fill-${tone}`}
-        style={{ width: `${(pct / 150) * 100}%` }}
-      />
-      {/* Marker at the 100%-required position; 100% maps to 100/150 = 66.6% of the bar */}
-      <div className="pbar-marker" style={{ left: '66.6%' }} />
+    <div
+      className="flex items-center gap-2 min-w-[140px]"
+      title={`${allocated.toFixed(2)} of ${required.toFixed(2)}h required`}
+    >
+      <div className="pbar flex-1">
+        <div
+          className={`absolute inset-y-0 left-0 rounded-full ${fillColor}`}
+          style={{ width: `${(pct / 150) * 100}%` }}
+        />
+        {/* 100%-required marker at 100/150 = 66.6% of the bar */}
+        <div className="pbar-marker" style={{ left: '66.66%' }} />
+      </div>
+      <span className={`text-xs font-medium tabular w-10 text-right ${labelColor}`}>
+        {(ratio * 100).toFixed(0)}%
+      </span>
     </div>
   );
 }
